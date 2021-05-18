@@ -1,4 +1,4 @@
-CREATE TABLE Loan
+CREATE TABLE tmp_loan
 (
     movie_id INT NOT NULL,
     place_id INT NOT NULL,
