@@ -35,7 +35,23 @@ WHERE M.category = C.name AND
 GROUP BY M.category, M.name, P.country, P.city, P.district, D.year, D.month, D.day, L.name, DU.day_count, amount_to_pay
 ORDER BY M.category;
 
--- Llenado de datos de la tabla temporal con los datos de la tabla central del modelo estrella
+CREATE OR REPLACE FUNCTION set_rental_cost(IN p_rental_id INT) RETURNS NUMERIC(5,2)
+AS $$
+DECLARE result NUMERIC(5,2);
+BEGIN
+      IF (SELECT p.payment_id FROM payment p WHERE p.rental_id = p_rental_id) IS NOT NULL THEN
+            result := (SELECT p.amount FROM payment p WHERE p.rental_id = p_rental_id);
+      ELSIF (SELECT p.payment_id FROM payment p WHERE p.rental_id = p_rental_id) > 1 THEN
+            result := 0;
+      ELSE
+            result := 0;
+      END IF
+      RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Llenado de datos de la tabla temporal con los datos de la tabla central del modelo estrella donde SI hay pagos
+-- Da 16048 y no 16044 porque hay 5 pagos para un mismo alquiler en un caso.
 INSERT INTO tmp_rental_stats (movie_id, place_id, date_id, language_id, duration_id, rental_count, rental_cost)
 SELECT M.movie_id,
        P.place_id,
@@ -43,7 +59,10 @@ SELECT M.movie_id,
        L.language_id,
        DU.duration_id,
        1 as rental_count,
-       (((DATE_PART('hour', R.return_date - R.rental_date) / 24) / F.rental_duration) * F.rental_rate)::numeric(5,2) as rental_cost
+       CASE WHEN PA.amount IS NOT NULL THEN PA.amount
+            ELSE 0
+       END
+      --  PA.amount as rental_cost
 FROM  Date D, language L, Duration DU, rental R
 INNER JOIN inventory I ON I.inventory_id = R.inventory_id
 INNER JOIN film F ON F.film_id = I.film_id
@@ -58,20 +77,23 @@ INNER JOIN city CI ON CI.city_id = A.city_id
 INNER JOIN country CO ON CO.country_id = CI.country_id
 INNER JOIN place P ON P.store_id = ST.store_id
 
+LEFT JOIN payment PA ON PA.rental_id = R.rental_id
+
 WHERE M.category = C.name AND
       EXTRACT(YEAR FROM R.rental_date)::smallint = D.year AND
       EXTRACT(MONTH FROM R.rental_date)::smallint = D.month AND
       EXTRACT(DAY FROM R.rental_date)::smallint = D.day AND
       F.language_id = L.language_id AND
-      -- (DATE_PART('hour', R.return_date - R.rental_date) / 24)::smallint = DU.day_count
-       DATE_PART('minute', R.return_date - R.rental_date)::smallint >= 0
-      AND DATE_PART('hour', R.return_date - R.rental_date)::smallint <= 18
-      AND DATE_PART('day', R.return_date - R.rental_date)::smallint = 0;
-
--- NUEVA
+      CASE WHEN R.return_date IS NOT NULL THEN
+                  (DATE_PART('day', R.return_date - R.rental_date))::smallint = DU.day_count
+            ELSE 
+                  0 = DU.day_count
+      END
+GROUP BY R.rental_id;
 
 
 -- Llenado de datos de la tabla central del modelo estrella
+-- Da 15821
 INSERT INTO rental_stats
 SELECT movie_id,
        place_id,
@@ -79,6 +101,6 @@ SELECT movie_id,
        language_id,
        duration_id,
        SUM(rental_count),
-       SUM(amount_sold)
+       SUM(rental_cost) as amount_sold
 FROM tmp_rental_stats
-GROUP BY movie_id, place_id, date_id, language_id, duration_id, amount_sold;
+GROUP BY movie_id, place_id, date_id, language_id, duration_id;
