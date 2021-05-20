@@ -10,7 +10,7 @@ SELECT M.category,
        D.day,
        L.name,
        DU.day_count,
-      (DU.day_count / F.rental_duration) * F.rental_rate as payment
+      ((DU.day_count / F.rental_duration) * F.rental_rate) as amount_to_pay
 
 FROM  Date D, language L, Duration DU, rental R
 INNER JOIN inventory I ON I.inventory_id = R.inventory_id
@@ -32,18 +32,18 @@ WHERE M.category = C.name AND
       EXTRACT(DAY FROM R.rental_date)::smallint = D.day AND
       F.language_id = L.language_id AND
       DATE_PART('day', R.return_date - R.rental_date)::smallint = DU.day_count
-GROUP BY M.category, M.name, P.country, P.city, P.district, D.year, D.month, D.day, L.name, DU.day_count, payment
+GROUP BY M.category, M.name, P.country, P.city, P.district, D.year, D.month, D.day, L.name, DU.day_count, amount_to_pay
 ORDER BY M.category;
 
 -- Llenado de datos de la tabla temporal con los datos de la tabla central del modelo estrella
-INSERT INTO tmp_loan (movie_id, place_id, date_id, language_id, duration_id, rental_count, amount_sold)
+INSERT INTO tmp_rental_stats (movie_id, place_id, date_id, language_id, duration_id, rental_count, rental_cost)
 SELECT M.movie_id,
        P.place_id,
        D.date_id,
        L.language_id,
        DU.duration_id,
-       1,
-       (DU.day_count / F.rental_duration) * F.rental_rate as amount_sold
+       1 as rental_count,
+       (((DATE_PART('hour', R.return_date - R.rental_date) / 24) / F.rental_duration) * F.rental_rate)::numeric(5,2) as rental_cost
 FROM  Date D, language L, Duration DU, rental R
 INNER JOIN inventory I ON I.inventory_id = R.inventory_id
 INNER JOIN film F ON F.film_id = I.film_id
@@ -63,10 +63,16 @@ WHERE M.category = C.name AND
       EXTRACT(MONTH FROM R.rental_date)::smallint = D.month AND
       EXTRACT(DAY FROM R.rental_date)::smallint = D.day AND
       F.language_id = L.language_id AND
-      DATE_PART('day', R.return_date - R.rental_date)::smallint = DU.day_count;
+      -- (DATE_PART('hour', R.return_date - R.rental_date) / 24)::smallint = DU.day_count
+       DATE_PART('minute', R.return_date - R.rental_date)::smallint >= 0
+      AND DATE_PART('hour', R.return_date - R.rental_date)::smallint <= 18
+      AND DATE_PART('day', R.return_date - R.rental_date)::smallint = 0;
+
+-- NUEVA
+
 
 -- Llenado de datos de la tabla central del modelo estrella
-INSERT INTO Loan
+INSERT INTO rental_stats
 SELECT movie_id,
        place_id,
        date_id,
@@ -74,5 +80,5 @@ SELECT movie_id,
        duration_id,
        SUM(rental_count),
        SUM(amount_sold)
-FROM tmp_loan
+FROM tmp_rental_stats
 GROUP BY movie_id, place_id, date_id, language_id, duration_id, amount_sold;

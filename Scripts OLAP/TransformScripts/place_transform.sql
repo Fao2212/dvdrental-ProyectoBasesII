@@ -9,6 +9,7 @@ FROM store S,
      address A
 WHERE A.address_id = S.address_id and 
       A.city_id = CI.city_id and 
-      CO.country_id = CI.country_id;
+      CO.country_id = CI.country_id
+ORDER BY country, city, district, store_id;
 
 
