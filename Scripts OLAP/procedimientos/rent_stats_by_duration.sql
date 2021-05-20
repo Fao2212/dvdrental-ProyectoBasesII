@@ -1,7 +1,7 @@
 -- •	dar el número de alquileres y el monto cobrado, por duración del préstamo
 
 CREATE OR REPLACE FUNCTION rent_stats_by_duration (IN p_days INT) 
-RETURNS TABLE (rent_count INT, amount_charged NUMERIC(5,2))
+RETURNS TABLE (days smallint, rent_count INT, amount_charged NUMERIC(5,2))
 LANGUAGE plpgsql    
 AS $$
 BEGIN
