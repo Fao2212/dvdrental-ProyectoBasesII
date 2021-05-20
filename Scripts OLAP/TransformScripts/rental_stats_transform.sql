@@ -50,8 +50,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
 -- Llenado de datos de la tabla temporal con los datos de la tabla central del modelo estrella donde SI hay pagos
 -- Da 16048 y no 16044 porque hay 5 pagos para un mismo alquiler en un caso.
+WITH payments_added_up AS
+(
+    SELECT rental_id,
+       SUM(amount) AS total_amount
+    FROM payment p
+    GROUP BY rental_id
+)
 INSERT INTO tmp_rental_stats (movie_id, place_id, date_id, language_id, duration_id, rental_count, rental_cost)
 SELECT M.movie_id,
        P.place_id,
@@ -59,7 +67,7 @@ SELECT M.movie_id,
        L.language_id,
        DU.duration_id,
        1 as rental_count,
-       CASE WHEN PA.amount IS NOT NULL THEN PA.amount
+       CASE WHEN PAU.total_amount IS NOT NULL THEN PAU.total_amount
             ELSE 0
        END
       --  PA.amount as rental_cost
@@ -77,7 +85,7 @@ INNER JOIN city CI ON CI.city_id = A.city_id
 INNER JOIN country CO ON CO.country_id = CI.country_id
 INNER JOIN place P ON P.store_id = ST.store_id
 
-LEFT JOIN payment PA ON PA.rental_id = R.rental_id
+LEFT JOIN payments_added_up PAU ON PAU.rental_id = R.rental_id
 
 WHERE M.category = C.name AND
       EXTRACT(YEAR FROM R.rental_date)::smallint = D.year AND
@@ -88,8 +96,7 @@ WHERE M.category = C.name AND
                   (DATE_PART('day', R.return_date - R.rental_date))::smallint = DU.day_count
             ELSE 
                   0 = DU.day_count
-      END
-GROUP BY R.rental_id;
+      END;
 
 
 -- Llenado de datos de la tabla central del modelo estrella
