@@ -13,11 +13,13 @@ AS
 $$
 BEGIN
 	RETURN QUERY
-		SELECT F.film_id,F.title,F.rental_duration,I. FROM film F
+		SELECT F.film_id,F.title,F.rental_duration FROM film F
 		INNER JOIN inventory I ON F.film_id = I.film_id
 		WHERE F.title LIKE '%'||_title||'%';
 END;
 $$ LANGUAGE plpgsql
+SECURITY DEFINER
+
 GRANT EXECUTE ON FUNCTION buscar_una_pelicula TO EMP;
 
 select * from buscar_una_pelicula('Airport')
