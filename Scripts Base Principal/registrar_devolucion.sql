@@ -15,4 +15,4 @@ END;
 $$ LANGUAGE plpgsql
 GRANT EXECUTE ON PROCEDURE registrar_devolucion TO EMP;
 
-call registrar_devolucion(2::smallint,2::smallint,2,9.99)
+call registrar_devolucion(2::smallint,2::smallint,2,9.99);

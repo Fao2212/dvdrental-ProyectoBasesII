@@ -11,9 +11,11 @@ BEGIN
 	VALUES(_store_id,_first_name,_last_name,_email,_address_id,TRUE,current_date,LOCALTIMESTAMP,1);
 END;
 $$ LANGUAGE plpgsql
+SECURITY DEFINER
+
 GRANT EXECUTE ON PROCEDURE insertar_nuevo_cliente TO EMP;
 
-call insertar_nuevo_cliente(1::smallint,'Fernando','Alvarez','testmail@testmail.com',1::smallint)
+call insertar_nuevo_cliente(1::smallint,'Fernando','Alvarez','testmail@testmail.com',1::smallint);
 
 select * from customer
 select * from address
