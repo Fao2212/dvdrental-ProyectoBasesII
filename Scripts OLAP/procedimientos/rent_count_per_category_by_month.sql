@@ -9,6 +9,10 @@ BEGIN
         SELECT M.category, COUNT(*)
         FROM rental_stats RS
         INNER JOIN movie M ON M.movie_id = RS.movie_id
-        INNER JOIN date D ON D.month = p_month
+        INNER JOIN date D ON D.date_id = RS.date_id
+        WHERE D.month = p_month
         GROUP BY M.category;
 END; $$
+
+CREATE INDEX idx_movieid_dateid on rental_stats(movie_id, date_id);
+CREATE INDEX idx_date_month on date(month);
