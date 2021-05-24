@@ -5,11 +5,11 @@ AS
 $$
 BEGIN
     RETURN QUERY
-        SELECT D.year,M.category,COUNT(L.rental_count),SUM(L.amount_sold)
-        FROM rental_stats L
-        INNER JOIN Date D ON D.date_id = L.date_id
-        INNER JOIN Movie M ON M.movie_id = L.movie_id
-        GROUP BY ROLLUP(D.year,M.category);
+        SELECT SELECT D.year,M.category,COUNT(RS.rental_count),SUM(RS.amount_sold)
+        FROM rental_stats RS
+        INNER JOIN Date D ON D.date_id = RS.date_id
+        INNER JOIN Movie M ON M.movie_id = RS.movie_id
+        GROUP BY CUBE(D.year,M.category);
 END;
 $$ LANGUAGE plpgsql
 

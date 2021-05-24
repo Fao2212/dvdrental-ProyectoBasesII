@@ -12,3 +12,6 @@ BEGIN
         WHERE D.day_count = p_days::smallint
         GROUP BY D.day_count;
 END;$$
+
+CREATE INDEX idx_rentalstats_duration ON rental_stats(duration_id);
+CREATE INDEX idx_day_count ON duration(day_count);
