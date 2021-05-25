@@ -2,7 +2,7 @@
 
 -- Para reiniciar id serial
 ALTER SEQUENCE <tablename>_<id>_seq RESTART WITH 1;
-
+ALTER SEQUENCE duration_duration_id_seq RESTART WITH 1;
 select R.rental_id, 
        R.rental_date, 
        R.return_date, 
